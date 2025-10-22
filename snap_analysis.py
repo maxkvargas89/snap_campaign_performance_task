@@ -161,10 +161,11 @@ daily_summary_roas = df_performance.groupby('Day').agg({
 }).reset_index()
 
 daily_summary_roas['roas'] = daily_summary_roas['Purchases Value']/daily_summary_roas['Spend']
-daily_summary_roas['roas'] = daily_summary_roas['roas'].round()
+daily_summary_roas['roas'] = daily_summary_roas['roas'].round(2)
 daily_summary_roas['roas_rank'] = daily_summary_roas['roas'].rank(ascending=False, method='min')
 daily_summary_roas['purchases_rank'] = daily_summary_roas['Purchases'].rank(ascending=False, method='min')
 print(daily_summary_roas[daily_summary_roas['purchases_rank'] == 1.0])
+print(daily_summary_roas)
 
 # Question 5
 
@@ -192,3 +193,38 @@ creative_combo_summary = df_merged.groupby('Creative Name (Featured Product_CTA)
 
 creative_combo_summary['purchases_rank'] = creative_combo_summary['Purchases'].rank(ascending=False, method='min')
 print(creative_combo_summary[creative_combo_summary['purchases_rank'] == 1.0])
+
+
+# Trends and Observations
+
+# Overall campaign ROAS
+total_roas = df_merged['Purchases Value'].sum() / df_merged['Spend'].sum()
+
+# ROAS by Product Featured
+df_merged[['Product Featured', 'CTA']] = df_merged['Creative Name (Featured Product_CTA)'].str.split('_', n=1, expand=True)
+roas_by_product = df_merged.groupby('Product Featured').agg({
+    'Spend': 'sum',
+    'Purchases Value': 'sum'
+})
+roas_by_product['ROAS'] = roas_by_product['Purchases Value'] / roas_by_product['Spend']
+
+# ROAS by CTA
+roas_by_cta = df_merged.groupby('CTA').agg({
+    'Spend': 'sum',
+    'Purchases Value': 'sum'
+})
+roas_by_cta['ROAS'] = roas_by_cta['Purchases Value'] / roas_by_cta['Spend']
+
+# Daily performance
+daily_perf = df_merged.groupby('Day').agg({
+    'Spend': 'sum',
+    'Purchases': 'sum',
+    'Purchases Value': 'sum',
+    'Installs': 'sum'
+})
+daily_perf['ROAS'] = daily_perf['Purchases Value'] / daily_perf['Spend']
+daily_perf['CPI'] = daily_perf['Spend'] / daily_perf['Installs']
+
+print(roas_by_product.sort_values('ROAS', ascending=False))
+print(roas_by_cta.sort_values('ROAS', ascending=False))
+print(daily_perf.sort_values('ROAS', ascending=False))
