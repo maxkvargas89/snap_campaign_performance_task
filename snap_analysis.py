@@ -10,6 +10,8 @@ Created on Tue Oct 21 17:50:34 2025
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 df_performance = pd.read_csv('snap_performance_data.csv')
 df_creative = pd.read_csv('snap_creative_library.csv')
@@ -198,9 +200,11 @@ print(creative_combo_summary[creative_combo_summary['purchases_rank'] == 1.0])
 # Trends and Observations
 
 # Overall campaign ROAS
+
 total_roas = df_merged['Purchases Value'].sum() / df_merged['Spend'].sum()
 
 # ROAS by Product Featured
+
 df_merged[['Product Featured', 'CTA']] = df_merged['Creative Name (Featured Product_CTA)'].str.split('_', n=1, expand=True)
 roas_by_product = df_merged.groupby('Product Featured').agg({
     'Spend': 'sum',
@@ -209,15 +213,78 @@ roas_by_product = df_merged.groupby('Product Featured').agg({
 roas_by_product['ROAS'] = roas_by_product['Purchases Value'] / roas_by_product['Spend']
 
 # ROAS by CTA
+
 roas_by_cta = df_merged.groupby('CTA').agg({
     'Spend': 'sum',
     'Purchases Value': 'sum'
 })
 roas_by_cta['ROAS'] = roas_by_cta['Purchases Value'] / roas_by_cta['Spend']
 
-# Daily performance
+# Purchases matrix
+
+purchases_matrix = df_merged.pivot_table(
+    index='Product Featured',
+    columns='CTA',
+    values='Purchases',
+    aggfunc='sum',
+    fill_value=0
+)
+
+plt.figure(figsize=(10, 6))
+sns.heatmap(
+    purchases_matrix, 
+    annot=True,           # Show numbers in cells
+    fmt='.0f',            # No decimal places
+    cmap='RdYlGn',        # Yellow-Orange-Red color scheme
+    cbar_kws={'label': 'Purchases'},
+    linewidths=0.5,       # Grid lines
+    linecolor='white'
+)
+
+plt.title('Purchases by Product Featured × CTA', fontsize=16, fontweight='bold')
+plt.xlabel('CTA', fontsize=12)
+plt.ylabel('Product Featured', fontsize=12)
+plt.tight_layout()
+
+plt.savefig('purchases_heatmap.png', dpi=300, bbox_inches='tight')
+print("✓ Saved as purchases_heatmap.png")
+plt.show()
+
+# Spend matrix 
+
+spend_matrix = df_merged.pivot_table(
+    index='Product Featured',
+    columns='CTA',
+    values='Spend',
+    aggfunc='sum',
+    fill_value=0
+)
+
+plt.figure(figsize=(10, 6))
+sns.heatmap(
+    spend_matrix, 
+    annot=True,           # Show numbers in cells
+    fmt='.0f',            # No decimal places
+    cmap='RdYlGn',        # Yellow-Orange-Red color scheme
+    cbar_kws={'label': 'Spend'},
+    linewidths=0.5,       # Grid lines
+    linecolor='white'
+)
+
+plt.title('Spend by Product Featured × CTA', fontsize=16, fontweight='bold')
+plt.xlabel('CTA', fontsize=12)
+plt.ylabel('Product Featured', fontsize=12)
+plt.tight_layout()
+
+plt.savefig('spend_heatmap.png', dpi=300, bbox_inches='tight')
+print("✓ Saved as spend_heatmap.png")
+plt.show()
+
+# Daily performance (appendix tables)
+
 daily_perf = df_merged.groupby('Day').agg({
     'Spend': 'sum',
+    'Paid Impressions': 'sum',
     'Purchases': 'sum',
     'Purchases Value': 'sum',
     'Installs': 'sum'
@@ -228,3 +295,10 @@ daily_perf['CPI'] = daily_perf['Spend'] / daily_perf['Installs']
 print(roas_by_product.sort_values('ROAS', ascending=False))
 print(roas_by_cta.sort_values('ROAS', ascending=False))
 print(daily_perf.sort_values('ROAS', ascending=False))
+
+with pd.ExcelWriter('snap_campaign_analysis.xlsx') as writer:
+    roas_by_product.to_excel(writer, sheet_name='By Product', index=True)
+    roas_by_cta.to_excel(writer, sheet_name='By CTA', index=True)
+    daily_perf.to_excel(writer, sheet_name='By Day', index=True)
+
+print("✓ Exported to snap_campaign_analysis.xlsx")
